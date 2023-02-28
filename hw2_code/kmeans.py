@@ -50,32 +50,60 @@ class KMeans(object):
         Return:
             self.centers : K x D numpy array, the centers.
         """
+        #print(self.K)
         #print(self.points.shape[0])
         sample_size = int(self.points.shape[0] * 0.01)
         samples = self.points[np.random.choice(self.points.shape[0], sample_size, replace=False), :]
-        print(samples) 
-        print('---------------------')
-        centers = samples[np.random.choice(samples.shape[0], 1, replace=False), :]
-        print(centers)
-        print(centers.shape)
-        print('---------------------')
+        #print(samples) 
+        #print('---------------------')
+        centers = samples[np.random.choice(samples.shape[0], 1), :]
+        #print(centers)
+        #print(centers.shape)
+        #print('---------------------')
         
 
         ## DEAL WITH FINDING THE MINIMUM DISTANCE OF THE MAX VALUES IN EACH CENTER. Check Instruciton 3
 
-        for k in range(0, self.K):
+        for k in range(0, self.K - 1):
+            #print('K_i: ', k)
             eu_dist_arr = pairwise_dist(centers, samples)
-            print(eu_dist_arr)
-            print(eu_dist_arr.shape)
-            print('---------------------')
-            max_value_i = np.argmax(eu_dist_arr)
-            print(samples[max_value_i, :].shape)
-            new_center = samples[max_value_i, :]
-            centers = np.append(centers, new_center.reshape(1, new_center.shape[0]), axis=0)
-            print(centers)
-            print('---------------------')
+            #print(eu_dist_arr)
+            #print(eu_dist_arr.shape)
+            #print('---------------------')
+            #---------------Frist Approach -------------------------
+            # max_value_arr = np.amax(eu_dist_arr, axis=1)
+            # print('max values: ', max_value_arr)
+            # print('---------------------')
+            # #print(samples[max_value_i, :].shape)
+            # min_cluster_i = np.argmin(max_value_arr)
+            # print('index of min dist value: ', min_cluster_i)
+            # print('---------------------')
+            # max_value_i = np.argmax(eu_dist_arr[min_cluster_i,:])
+            # print('index of the max distance from the min cluster: ', max_value_i)
+            # print('---------------------')
             
-        raise NotImplementedError
+            #---------------Second Approach -------------------------
+            min_dist_arr = np.min(eu_dist_arr, axis=0)
+            #print('min_dist_arr: ', min_dist_arr)
+            #print('---------------------')
+            max_value = np.amax(min_dist_arr)
+            #print('max_value: ', max_value)
+            #print('---------------------')
+            max_value_i = np.where(eu_dist_arr == max_value)[1][0]
+            #print('max_value_i: ', max_value_i)
+            #print('---------------------')
+
+
+
+            #-------------------------------------------------
+            new_center = samples[max_value_i, :]
+            #print('new center: ', new_center)
+            #print('---------------------')
+            centers = np.append(centers, new_center.reshape(1, new_center.shape[0]), axis=0)
+            #print(centers)
+            #print('---------------------')
+            
+        return centers
 
     def update_assignment(self):  # [5 pts]
         """
@@ -84,8 +112,26 @@ class KMeans(object):
             self.assignments : numpy array of length N, the cluster assignment for each point
         Hint: You could call pairwise_dist() function
         """        
+        #print(self.centers)
+        #print('----------------------')
+        #print(self.points)
+        #print('----------------------')
 
-        raise NotImplementedError
+        curr_centers = self.centers
+        curr_datapoints = self.points
+
+        eu_dist_arr = pairwise_dist(curr_centers, curr_datapoints)
+        #print(eu_dist_arr)
+        #print('----------------------')
+        self.assignments = np.argmin(eu_dist_arr, axis=0)
+        #print(assignments)
+        #print('----------------------')
+
+
+        #eu_dist_arr = pairwise_dist(self.centers, self.points)
+        
+        #print(eu_dist_arr)
+        return self.assignments
 
     def update_centers(self):  # [5 pts]
         """
@@ -95,6 +141,21 @@ class KMeans(object):
 
         HINT: Points may be integer, but the centers should not have to be. Watch out for dtype casting!
         """
+        #Uncomment this later
+        # datapoints = self.points
+        # cluster_ids = self.assignments
+        # k = self.K
+        # old_centers = self.centers
+
+        # new_centers = np.zeros_like(old_centers)
+
+        # for i in range(0,k):
+        #     cluster_points = datapoints[cluster_ids == i]
+        #     mean = np.mean(cluster_points, axis=0)
+        #     new_centers[i] = mean
+
+        # print(new_centers)
+
 
         raise NotImplementedError
 

@@ -91,6 +91,31 @@ class KMeansTests(unittest.TestCase):
         self.assertTrue(np.allclose(new_centers, expected_centers, atol=1e-4),
                         msg="Incorrect centers, check that means are computed correctly")
         print_success_message()
+    
+    #---------------This was done by Tony -------------------#
+    def test_cluster_assignment(self, km=KMeans):
+        points = np.array([[-1.43120297,  0.8786823],
+                            [-0.92082436,  0.48852312],
+                            [-0.98384412, -1.95809560],
+                            [ 0.16539071, -2.00230059],
+                            [ 1.13874072, -1.37183974],
+                            [-0.30292898, -1.90092874],
+                            [-1.96110084,  0.25292960],
+                            [ 0.80891560, -0.43945057],
+                            [-0.35643708, -0.16907999],
+                            [-1.15222464,  1.23224667]])
+        cluster_idx = np.array([1, 1, 2, 2, 2, 2, 1, 2, 2, 1])
+        old_centers = np.array([[-0.29934073,  0.22471242],
+                                [-0.65337045,  0.31246784],
+                                [-0.24212177, -0.06978610]])
+        kmeans = km(points, len(np.unique(cluster_idx)))
+        kmeans.assignments = cluster_idx
+        kmeans.centers = old_centers
+        test_assigments = kmeans.update_assignment()
+        expected_assigment = cluster_idx
+        self.assertTrue(np.allclose(test_assigments, expected_assigment, atol=1e-4),
+                        msg="Incorrect assigments, check that means are computed correctly")
+        print_success_message()
 
     def test_init(self, km=KMeans):
         X, y_true = make_blobs(n_samples=4000, centers=4, cluster_std=0.70, random_state=0)
