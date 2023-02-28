@@ -41,7 +41,8 @@ class KMeans(object):
         Hint: Please initialize centers by randomly sampling points from the dataset in case the autograder fails.
         """
 
-        raise NotImplementedError
+        centers = self.points[np.random.choice(self.points.shape[0], self.K, replace=False), :]
+        return centers
 
     def kmpp_init(self):# [3 pts]
         """
@@ -49,7 +50,31 @@ class KMeans(object):
         Return:
             self.centers : K x D numpy array, the centers.
         """
+        #print(self.points.shape[0])
+        sample_size = int(self.points.shape[0] * 0.01)
+        samples = self.points[np.random.choice(self.points.shape[0], sample_size, replace=False), :]
+        print(samples) 
+        print('---------------------')
+        centers = samples[np.random.choice(samples.shape[0], 1, replace=False), :]
+        print(centers)
+        print(centers.shape)
+        print('---------------------')
+        
 
+        ## DEAL WITH FINDING THE MINIMUM DISTANCE OF THE MAX VALUES IN EACH CENTER. Check Instruciton 3
+
+        for k in range(0, self.K):
+            eu_dist_arr = pairwise_dist(centers, samples)
+            print(eu_dist_arr)
+            print(eu_dist_arr.shape)
+            print('---------------------')
+            max_value_i = np.argmax(eu_dist_arr)
+            print(samples[max_value_i, :].shape)
+            new_center = samples[max_value_i, :]
+            centers = np.append(centers, new_center.reshape(1, new_center.shape[0]), axis=0)
+            print(centers)
+            print('---------------------')
+            
         raise NotImplementedError
 
     def update_assignment(self):  # [5 pts]
@@ -118,5 +143,14 @@ def pairwise_dist(x, y):  # [5 pts]
                 dist: N x M array, where dist2[i, j] is the euclidean distance between
                 x[i, :] and y[j, :]
         """
+        #Sum the square of X and Y across the dimensions
+        x_2 = np.sum(x**2, axis=1)
+        y_2 = np.sum(y**2, axis=1)
 
-        raise NotImplementedError
+        #Multiply X and Y
+        X_Y = x@np.transpose(y)
+
+        #Calculate the pairwise euclidean distance
+        eu_dist = np.sqrt(x_2.reshape(x_2.shape[0], 1) + y_2 - (2*X_Y))
+
+        return eu_dist
