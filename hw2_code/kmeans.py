@@ -66,7 +66,7 @@ class KMeans(object):
 
         for k in range(0, self.K - 1):
             #print('K_i: ', k)
-            eu_dist_arr = pairwise_dist(centers, samples)
+            sq_dist_arr = pairwise_dist(centers, samples)**2
             #print(eu_dist_arr)
             #print(eu_dist_arr.shape)
             #print('---------------------')
@@ -83,13 +83,13 @@ class KMeans(object):
             # print('---------------------')
             
             #---------------Second Approach -------------------------
-            min_dist_arr = np.min(eu_dist_arr, axis=0)
+            min_dist_arr = np.min(sq_dist_arr, axis=0)
             #print('min_dist_arr: ', min_dist_arr)
             #print('---------------------')
             max_value = np.amax(min_dist_arr)
             #print('max_value: ', max_value)
             #print('---------------------')
-            max_value_i = np.where(eu_dist_arr == max_value)[1][0]
+            max_value_i = np.where(sq_dist_arr == max_value)[1][0]
             #print('max_value_i: ', max_value_i)
             #print('---------------------')
 
@@ -141,23 +141,31 @@ class KMeans(object):
 
         HINT: Points may be integer, but the centers should not have to be. Watch out for dtype casting!
         """
-        #Uncomment this later
-        # datapoints = self.points
-        # cluster_ids = self.assignments
-        # k = self.K
-        # old_centers = self.centers
+        
+        datapoints = self.points
+        cluster_ids = self.assignments
+        k = self.K
+        old_centers = self.centers
+        #print('datapoints: ', datapoints)
+        #print('-----------------------')
+        #print('cluster ids: ', cluster_ids)
+        #print('--------------------')
 
-        # new_centers = np.zeros_like(old_centers)
+        new_centers = np.zeros_like(old_centers, dtype=float)
+        #print('New Centers: ', new_centers)
+        #print('--------------------')
 
-        # for i in range(0,k):
-        #     cluster_points = datapoints[cluster_ids == i]
-        #     mean = np.mean(cluster_points, axis=0)
-        #     new_centers[i] = mean
+        for i in range(0,k):
+            #print('K_i: ', i)
+            cluster_points = datapoints[cluster_ids == i]
+            #print('Cluster points: ', cluster_points)
+            #print('--------------------')
+            mean = np.mean(cluster_points, axis=0)
+            new_centers[i] = mean
 
-        # print(new_centers)
-
-
-        raise NotImplementedError
+        #print('Final New Centers: ', new_centers)
+        
+        return new_centers
 
     def get_loss(self):  # [5 pts]
         """
@@ -165,9 +173,31 @@ class KMeans(object):
         Return:
             self.loss: a single float number, which is the objective function of KMeans.
         """
+        curr_centers = self.centers
+        datapoints = self.points
+        cluster_ids = self.assignments
+        k = self.K
 
-        raise NotImplementedError
+        sq_dist_arr = np.zeros((1, k), dtype=float)
+        #print(sq_dist_arr)
 
+        for i in range(0, k):
+            #print('k: ', i)
+            cluster_points = datapoints[cluster_ids == i]
+            #print('cluster points: ', cluster_points)
+            #print('--------------------')
+            #print('cluster center: ',curr_centers[i, :].reshape(1, curr_centers.shape[1]))
+            #print('--------------------')
+            eu_dist = pairwise_dist(curr_centers[i, :].reshape(1, curr_centers.shape[1]), cluster_points)
+            #print('eu_dist', eu_dist)
+            #print('--------------------')
+            #print(np.sum(eu_dist**2))
+            sq_dist_arr[0, i] = np.sum(eu_dist**2)
+            #print(sq_dist_arr)
+        
+        loss = np.sum(sq_dist_arr)
+        #print('Loss', loss)
+        return loss
     def train(self):    # [10 pts]
         """
             Train KMeans to cluster the data:
@@ -190,9 +220,39 @@ class KMeans(object):
             self.assignments: Nx1 int numpy array
             self.loss: final loss value of the objective function of KMeans.
         """
-
-        raise NotImplementedError
-
+        #print('----------------------------------')
+        #print('max_iters:', self.max_iters)
+        prev_loss = 0
+        
+        for i in range(0, self.max_iters):
+            #print(i)
+            self.assignments = self.update_assignment()
+            self.centers = self.update_centers()
+            center_list = np.arange(self.K)
+            used_clusters = np.unique(self.assignments)
+            #print(used_clusters)
+            #print(np.array_equal(center_list, used_clusters))
+            #Check to make sure there is no cluster center without any points assigned to it
+            if not np.array_equal(center_list, used_clusters):
+                empty_cluster_arr = np.setdiff1d(center_list, used_clusters)
+                #Find the index in center list of the missing values.
+                #With this index replace the row at self.centers with a random row in points.
+                #Probably we will use a for loop to replace multiple rows.
+                for cluster_i in empty_cluster_arr:
+                    new_center = self.points[np.random.choice(self.points.shape[0], 1, replace=False), :]
+                    self.centers[cluster_i] = new_center
+                    #print('Im inside the for loop replaceing this cluster: ', cluster_i)
+            #print('prev_loss: ', prev_loss)
+            self.loss = self.get_loss()
+            loss_diff = (self.loss - prev_loss)**2
+            prev_loss = self.loss
+            #print('loss: ', self.loss)
+            #print('loss_diff', loss_diff)
+            #print('tolerance', self.rel_tol)
+            if loss_diff < self.rel_tol:
+                #print('I am breaking free!!')
+                break
+        return self.centers, self.assignments, self.loss
 
 def pairwise_dist(x, y):  # [5 pts]
         np.random.seed(1)
