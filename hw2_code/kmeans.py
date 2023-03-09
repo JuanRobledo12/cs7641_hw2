@@ -222,7 +222,7 @@ class KMeans(object):
         """
         #print('----------------------------------')
         #print('max_iters:', self.max_iters)
-        prev_loss = 0
+        prev_loss = 100000
         
         for i in range(0, self.max_iters):
             #print(i)
@@ -244,7 +244,7 @@ class KMeans(object):
                     #print('Im inside the for loop replaceing this cluster: ', cluster_i)
             #print('prev_loss: ', prev_loss)
             self.loss = self.get_loss()
-            loss_diff = (self.loss - prev_loss)**2
+            loss_diff = np.abs(prev_loss - self.loss) / prev_loss
             prev_loss = self.loss
             #print('loss: ', self.loss)
             #print('loss_diff', loss_diff)
@@ -272,6 +272,6 @@ def pairwise_dist(x, y):  # [5 pts]
         X_Y = x@np.transpose(y)
 
         #Calculate the pairwise euclidean distance
-        eu_dist = np.sqrt(x_2.reshape(x_2.shape[0], 1) + y_2 - (2*X_Y))
+        eu_dist = np.sqrt(np.abs(x_2.reshape(x_2.shape[0], 1) + y_2 - (2*X_Y)))
 
         return eu_dist
