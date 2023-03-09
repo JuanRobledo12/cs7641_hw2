@@ -33,8 +33,23 @@ class GMM(object):
         Hint:
             Add keepdims=True in your np.sum() function to avoid broadcast error. 
         """
+        #print(logit)
 
-        raise NotImplementedError
+        #TRY TO SUM THE MAX ROW VALUE AFTER THE EXP CALCULATION AND BEFORE LOG
+
+        max_row_val = np.amax(logit, axis=1, keepdims=True)
+        #print(max_row_val)
+        logit = logit - max_row_val
+        #print('substact max_val to logit: ', logit)
+        logit_exp = np.exp(logit)
+        #print('exp of logit: ', logit_exp)
+        logit_exp_sum = np.sum(logit_exp, axis=1, keepdims=True)
+        #print('sum of logit exp across D: ', logit_exp_sum)
+        prob = logit_exp / logit_exp_sum
+        #print('softmax prob: ', prob)
+        #print('shapes of logit and prob', logit.shape, prob.shape)
+
+        return prob
 
     def logsumexp(self, logit):  # [5pts]
         """
@@ -45,8 +60,18 @@ class GMM(object):
         Hint:
             The keepdims parameter could be handy
         """
-
-        raise NotImplementedError
+        #print('logit: ', logit)
+        max_row_val = np.amax(logit, axis=1, keepdims=True)
+        #print('max_row_val', max_row_val)
+        logit = logit - max_row_val
+        #print('sum max val to logit: ', logit)
+        logit_exp = np.exp(logit)
+        #print('logit_exp: ', logit_exp)
+        logit_exp_sum = np.sum(logit_exp, axis=1, keepdims=True)
+        #print('logit_exp sum', logit_exp_sum)
+        s = np.log(logit_exp_sum) + max_row_val
+        #print('natural log: ', s)
+        return s
 
     # for undergraduate student
     def normalPDF(self, points, mu_i, sigma_i):  # [5pts]
@@ -80,8 +105,33 @@ class GMM(object):
             try using another method involving the current arguments to get the value of D
         """
 
-        raise NotImplementedError
+        #print('points: ', points)
+        #print('mu_i', mu_i)
+        #print('sigma_i', sigma_i)
+        
+        try:
+            sigma_inv = np.linalg.inv(sigma_i)
+        except:
+            sigma_inv = np.linalg.inv(sigma_i + SIGMA_CONST)
+        
+        exp_term_1 = (points - mu_i) @ sigma_inv
+        exp_term_2 = np.transpose(points - mu_i)
 
+        #print('exp_term_1: ', exp_term_1)
+        #print('exp_term_2: ', exp_term_2)
+
+        exp_term = np.transpose(exp_term_1) * exp_term_2
+
+        #print('terms mult: ', exp_term)
+        final_exp_term = np.exp(-0.5*np.sum(exp_term, axis=0))
+        #print('final_exp_term: ', final_exp_term)
+
+        division_term = 1 / ((2*np.pi)**(points.shape[1]/2))
+        sigma_det_term = (1 / np.sqrt(np.linalg.det(sigma_i)))
+        #print('division_term: ', division_term)
+        #print('sigma_det_term: ', sigma_det_term)
+        normal_pdf = division_term * sigma_det_term * final_exp_term
+        return normal_pdf
 
 
     def _init_components(self, **kwargs):  # [5pts]
@@ -99,8 +149,21 @@ class GMM(object):
         """
         np.random.seed(5) #Do Not Remove Seed
 
+        N = self.points.shape[0]
+        D = self.points.shape[1]
+        #print('(N,D,K): ', N, D, self.K)
+        pi = np.ones(self.K) * (1/self.K)
+        mu = self.points[np.random.choice(N, size=self.K, replace=False)]
+        sigma = np.zeros((self.K, D, D))
 
-        raise NotImplementedError
+        for k in range(0, self.K):
+            np.fill_diagonal(sigma[k], 1)
+        
+        #print(mu)
+        #print(sigma)
+        #print(pi)
+
+        return pi, mu, sigma
 
     def _ll_joint(self, pi, mu, sigma, full_matrix=FULL_MATRIX, **kwargs):  # [10 pts]
         """
@@ -118,11 +181,30 @@ class GMM(object):
         # === graduate implementation
         #if full_matrix is True:
             #...
+        #print('datapoints shape: ', self.points.shape)
+        pdf_arr = np.ones((self.K, self.points.shape[0]))
+        for k_i in range(self.K):
+            mu_i = mu[k_i]
+            #print('mu_i', mu_i)
+            #print(mu_i.shape)
+            sigma_i = sigma[k_i]
+            #print('sigma_i', sigma_i)
+            #print(sigma_i.shape)
+            pdf_arr[k_i] = self.multinormalPDF(self.points, mu_i, sigma_i)
+        #print('pdf_arr: ', pdf_arr)
+        #print(pdf_arr.shape)
+        log_pdf_arr = np.log(pdf_arr + LOG_CONST)
+        log_pi_arr = np.log(pi + LOG_CONST)
+
+        #Log Likelihood
+        ll = log_pi_arr + np.transpose(log_pdf_arr)
+        #print('log likelihood array: ', ll)
+        #print(ll.shape)
 
         # === undergraduate implementation
         #if full_matrix is False:
             # ...
-        raise NotImplementedError
+        return ll
 
     def _E_step(self, pi, mu, sigma, full_matrix = FULL_MATRIX , **kwargs):  # [5pts]
         """
@@ -138,15 +220,20 @@ class GMM(object):
         Hint:
             You should be able to do this with just a few lines of code by using _ll_joint() and softmax() defined above.
         """
+
+        #I have no idea how this works I guess it is because you are optimizing r?
+
         # === graduate implementation
         #if full_matrix is True:
             # ...
-
+        
+        log_likeli = self._ll_joint(pi, mu, sigma, True) 
+        gamma = self.softmax(log_likeli)
         # === undergraduate implementation
         #if full_matrix is False:
             # ...
 
-        raise NotImplementedError
+        return gamma
 
     def _M_step(self, gamma, full_matrix=FULL_MATRIX, **kwargs):  # [10pts]
         """
@@ -166,12 +253,48 @@ class GMM(object):
         # === graduate implementation
         #if full_matrix is True:
             # ...
+        # print('gamma: ', gamma)
+        N_arr = np.sum(gamma, axis=0)
+        #print('N_arr', N_arr)
+        #print('datapoints', self.points)
+        #print('-------------------------')
 
+        n_D = self.points.shape[1]  #Dimensions in the dataset
+        new_mu = np.ones((self.K, n_D))
+        new_sigma = np.ones((self.K, n_D, n_D))
+        for k_i in range(self.K):
+            #New Mean Calculation
+            #print('K_i: ', k_i)
+            gamma_k_i = gamma[:,k_i].reshape(gamma.shape[0], 1)
+            #print('gamma_ki: ', gamma_k_i)
+            num_new_mu = gamma_k_i * self.points
+            new_mu[k_i] = np.sum(num_new_mu, axis=0) / N_arr[k_i]
+            #print('new_mu_ku', new_mu[k_i])
+
+            #New Covariance Matrix Calculation
+            point_mean_subs = self.points - new_mu[k_i]
+            #print('point_mean sub:', point_mean_subs)
+            #print(point_mean_subs.shape)
+            gamma_points_mean = np.transpose(gamma_k_i * point_mean_subs)
+            #print('gamma_points_mean: ', gamma_points_mean)
+            #print(gamma_points_mean.shape)
+            sigma_mult = gamma_points_mean@point_mean_subs
+            #print('sigma_mult: ', sigma_mult)
+            new_sigma[k_i] = sigma_mult / N_arr[k_i]
+            #print('new_sigma', new_sigma[k_i])
+            #print('-------------------------')
+        new_pi = N_arr / self.points.shape[0]
+        #print('new_mu', new_mu)
+        #print('------------------')
+        #print('new_sigma', new_sigma)
+        #print('new_pi', new_pi)
+
+        #Either use a for loop or add a new axis to divide K.
         # === undergraduate implementation
         #if full_matrix is False:
             # ...
 
-        raise NotImplementedError
+        return new_pi, new_mu, new_sigma
 
     def __call__(self, full_matrix=FULL_MATRIX, abs_tol=1e-16, rel_tol=1e-16, **kwargs):  # No need to change
         """
